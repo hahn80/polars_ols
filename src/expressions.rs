@@ -305,6 +305,7 @@ pub struct OLSKwargs {
     solve_method: Option<String>,
     null_policy: Option<String>,
     rcond: Option<f64>,
+    confidence_level: Option<f64>,
 }
 
 #[derive(Deserialize)]
@@ -459,6 +460,14 @@ fn statistics_struct_dtype(_input_fields: &[Field]) -> PolarsResult<Field> {
         ),
         Field::new("t_values", DataType::List(Box::new(DataType::Float64))),
         Field::new("p_values", DataType::List(Box::new(DataType::Float64))),
+        Field::new(
+            "lower_bounds",
+            DataType::List(Box::new(DataType::Float64)),
+        ),
+        Field::new(
+            "upper_bounds",
+            DataType::List(Box::new(DataType::Float64)),
+        ),
     ];
 
     // Create a struct type field with the defined fields
@@ -472,11 +481,13 @@ fn least_squares_statistics(inputs: &[Series], kwargs: OLSKwargs) -> PolarsResul
     let (y_fit, x_fit) = convert_polars_to_ndarray(inputs, &null_policy, is_valid.as_ref());
 
     let lambda = kwargs.alpha.unwrap();
+    let confidence_level = kwargs.confidence_level.unwrap_or(0.75);
+    
     let coefficients = _get_least_squares_coefficients(&y_fit, &x_fit, kwargs);
     let predictions = x_fit.dot(&coefficients);
 
     let residual_metrics = compute_residual_metrics(&y_fit, &predictions);
-    let feature_metrics = compute_feature_metrics(&x_fit, &y_fit, lambda);
+    let feature_metrics = compute_feature_metrics(&x_fit, &y_fit, lambda, confidence_level);
 
     let feature_names: Vec<&str> = inputs[1..].iter().map(|input| input.name()).collect();
     let feature_names = Series::from_iter(feature_names);
@@ -499,6 +510,14 @@ fn least_squares_statistics(inputs: &[Series], kwargs: OLSKwargs) -> PolarsResul
         Series::new(
             "p_values",
             [feature_metrics.p_values.iter().collect::<Series>()],
+        ),
+        Series::new(
+            "lower_bounds",
+            [feature_metrics.lower_bounds.iter().collect::<Series>()],
+        ),
+        Series::new(
+            "upper_bounds",
+            [feature_metrics.upper_bounds.iter().collect::<Series>()],
         ),
     ])?;
 

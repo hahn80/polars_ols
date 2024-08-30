@@ -39,6 +39,8 @@ pub struct FeatureMetrics {
     pub standard_errors: Array1<f64>,
     pub t_values: Array1<f64>,
     pub p_values: Array1<f64>,
+    pub lower_bounds: Array1<f64>,
+    pub upper_bounds: Array1<f64>,
 }
 
 fn t_value_to_p_value(t_value: f64, df: f64) -> f64 {
@@ -77,6 +79,7 @@ pub fn compute_feature_metrics(
     features: &Array2<f64>,
     targets: &Array1<f64>,
     lambda: f64,
+    confidence_level: f64,
 ) -> FeatureMetrics {
     let n = features.nrows() as f64;
     let p = features.ncols() as f64;
@@ -131,6 +134,23 @@ pub fn compute_feature_metrics(
         .zip(standard_errors.iter())
         .map(|(&coef, &se)| coef / se)
         .collect::<Array1<f64>>();
+    
+    // Compute the critical t-value based on the confidence level
+    let t_dist = StudentsT::new(0.0, 1.0, df).expect("Invalid parameters for StudentT distribution");
+    let critical_t = t_dist.inverse_cdf(1.0 - (1.0 - confidence_level) / 2.0);
+
+    // Compute the confidence intervals
+    let lower_bounds = coefficients
+        .iter()
+        .zip(standard_errors.iter())
+        .map(|(&coef, &se)| coef - critical_t * se)
+        .collect::<Array1<f64>>();
+
+    let upper_bounds = coefficients
+        .iter()
+        .zip(standard_errors.iter())
+        .map(|(&coef, &se)| coef + critical_t * se)
+        .collect::<Array1<f64>>();
 
     let p_values: Array1<f64> = t_values
         .iter()
@@ -141,5 +161,8 @@ pub fn compute_feature_metrics(
         standard_errors,
         t_values,
         p_values,
+        lower_bounds,
+        upper_bounds,
     }
 }
+

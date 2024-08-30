@@ -105,6 +105,7 @@ class OLSKwargs(Kwargs):
     positive: Optional[bool] = False  # if True, imposes non-negativity constraint on coefficients
     solve_method: Optional[SolveMethod] = None
     rcond: Optional[float] = None
+    confidence_level: Optional[float] = 0.75
 
     def __post_init__(self):
         # rust code does validate all options, but prefer to fail, on some, early
