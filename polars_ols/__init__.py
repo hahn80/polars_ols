@@ -4,7 +4,7 @@ from typing import List, Optional, Union
 
 import polars as pl
 
-from polars_ols.least_squares import (
+from .least_squares import (
     NullPolicy,
     OLSKwargs,
     OutputMode,
@@ -18,7 +18,7 @@ from polars_ols.least_squares import (
     compute_rolling_least_squares,
     predict,
 )
-from polars_ols.utils import build_expressions_from_patsy_formula
+from .utils import build_expressions_from_patsy_formula
 
 __all__ = [
     "compute_least_squares",
@@ -87,14 +87,20 @@ class LeastSquares:
         :param multi_target: boolean indicating if the target expression is multi-target struct.
         :param ols_kwargs: Additional, optional, model specific kwargs. See OLSKwargs.
         """
-        ols_func = compute_least_squares if not multi_target else compute_multi_target_least_squares
+        ols_func = (
+            compute_least_squares
+            if not multi_target
+            else compute_multi_target_least_squares
+        )
         return ols_func(
             self._expr,
             *features,
             sample_weights=sample_weights,
             add_intercept=add_intercept,
             mode=mode,
-            ols_kwargs=OLSKwargs(null_policy=null_policy, solve_method=solve_method, **ols_kwargs),
+            ols_kwargs=OLSKwargs(
+                null_policy=null_policy, solve_method=solve_method, **ols_kwargs
+            ),
         )
 
     def ols(self, *features: ExprOrStr, **kwargs) -> pl.Expr:

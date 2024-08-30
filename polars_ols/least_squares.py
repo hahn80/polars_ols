@@ -19,7 +19,7 @@ from typing import (
 import polars as pl
 from polars.plugins import register_plugin_function
 
-from polars_ols.utils import build_expressions_from_patsy_formula, parse_into_expr
+from .utils import build_expressions_from_patsy_formula, parse_into_expr
 
 if TYPE_CHECKING:
     ExprOrStr = Union[pl.Expr, str]
@@ -102,7 +102,9 @@ class OLSKwargs(Kwargs):
     l1_ratio: Optional[float] = None
     max_iter: Optional[int] = 1_000
     tol: Optional[float] = 1.0e-5
-    positive: Optional[bool] = False  # if True, imposes non-negativity constraint on coefficients
+    positive: Optional[bool] = (
+        False  # if True, imposes non-negativity constraint on coefficients
+    )
     solve_method: Optional[SolveMethod] = None
     rcond: Optional[float] = None
     confidence_level: Optional[float] = 0.75
@@ -184,7 +186,9 @@ def _pre_process_data(
     # handle intercept
     if add_intercept:
         if any(f.meta.output_name == "const" for f in features):
-            logger.info("feature named 'const' already detected, assuming it is an intercept")
+            logger.info(
+                "feature named 'const' already detected, assuming it is an intercept"
+            )
         else:
             features.append(target.fill_null(0.0).mul(0.0).add(1.0).alias("const"))
     # handle sample weights
@@ -307,7 +311,8 @@ def compute_multi_target_least_squares(
     )
     msg = "Consider running multiple independent regressions on a multi-expression target!"
     assert multi_target_conditions, (
-        "Multi-target regression is only supported " "for unconstrained OLS & Ridge problems." + msg
+        "Multi-target regression is only supported "
+        "for unconstrained OLS & Ridge problems." + msg
     )
     assert ols_kwargs.solve_method in {"svd", None}, (
         "only solve_method='svd' is supported for " "multi-target regressions"
@@ -471,14 +476,18 @@ def predict(
     Returns:
         polars expression denoting computed predictions.
     """
-    assert null_policy in _VALID_NULL_POLICIES, "'null_policy' must be one of {drop, ignore, zero}"
+    assert (
+        null_policy in _VALID_NULL_POLICIES
+    ), "'null_policy' must be one of {drop, ignore, zero}"
 
     coefficients: pl.Expr = parse_into_expr(coefficients)
     features: List[pl.Expr] = [parse_into_expr(f) for f in features]
 
     if add_intercept:
         if any(f.meta.output_name == "const" for f in features):
-            logger.warning("feature named 'const' already detected, assuming it is the intercept")
+            logger.warning(
+                "feature named 'const' already detected, assuming it is the intercept"
+            )
         else:
             features += (pl.lit(1.0).alias("const"),)
     return register_plugin_function(
