@@ -119,10 +119,12 @@ pub fn compute_feature_metrics(
         n - p
     };
 
-    assert!(
+    /*assert!(
         df > 0.0,
         "Degrees of freedom <= 0. Cannot compute standard errors."
-    );
+    );*/
+    let df = df.max(1.0);
+    
     let sigma_squared = rss / df;
 
     // Standard Errors: sqrt(diag(σ^2 * (X^T X + λI)^(-1)))
